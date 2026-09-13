@@ -1,14 +1,26 @@
 import sharp from "sharp";
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename =
+  fileURLToPath(import.meta.url);
 
-const ASSETS_DIR = path.join(__dirname, "../assets");
+const __dirname =
+  path.dirname(__filename);
 
-export async function getAutomaticPhoto(gender) {
-  const normalizedGender = gender.toLowerCase().trim();
+const ASSETS_DIR =
+  path.join(
+    __dirname,
+    "../assets"
+  );
+
+export async function getAutomaticPhoto(
+  gender
+) {
+  const normalizedGender =
+    String(gender)
+      .toLowerCase()
+      .trim();
 
   let photoPath;
 
@@ -17,12 +29,20 @@ export async function getAutomaticPhoto(gender) {
     normalizedGender === "laki laki" ||
     normalizedGender === "pria"
   ) {
-    photoPath = path.join(ASSETS_DIR, "foto-cowok.png");
+    photoPath =
+      path.join(
+        ASSETS_DIR,
+        "foto-cowok.png"
+      );
   } else if (
     normalizedGender === "perempuan" ||
     normalizedGender === "wanita"
   ) {
-    photoPath = path.join(ASSETS_DIR, "foto-cewek.png");
+    photoPath =
+      path.join(
+        ASSETS_DIR,
+        "foto-cewek.png"
+      );
   } else {
     throw new Error(
       "Jenis kelamin harus Laki-laki atau Perempuan."

@@ -1,5 +1,9 @@
-const sessions = new Map();
+// =====================================================
+// SESSION.JS
+// Menyimpan sementara data KTP setiap user
+// =====================================================
 
+const sessions = new Map();
 export function createSession(userId) {
   const session = {
     userId,
@@ -12,10 +16,15 @@ export function createSession(userId) {
   return session;
 }
 
+
+// =====================================================
+// MENGAMBIL SESSION
 export function getSession(userId) {
   return sessions.get(userId);
 }
 
+// =====================================================
+// UPDATE SESSION
 export function updateSession(userId, data) {
   const session = sessions.get(userId);
 
@@ -31,6 +40,16 @@ export function updateSession(userId, data) {
   return session;
 }
 
+
+// =====================================================
+// HAPUS SESSION
 export function deleteSession(userId) {
   sessions.delete(userId);
+}
+
+
+// =====================================================
+// CEK SESSION
+export function hasSession(userId) {
+  return sessions.has(userId);
 }

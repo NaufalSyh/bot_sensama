@@ -1,15 +1,28 @@
 {
-  "name": "bot-ktp",
+  "name": "bot_sensama",
   "version": "1.0.0",
-  "description": "Discord Bot KTP",
-  "main": "src/interactions.js",
+  "description": "Discord KTP Virtual Bot",
+  "main": "api/interactions.js",
+  "type": "module",
   "scripts": {
-    "start": "node src/interactions.js",
-    "register": "node src/register-command.js"
+    "start": "node api/interactions.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NaufalSyh/bot_sensama.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/NaufalSyh/bot_sensama/issues"
+  },
+  "homepage": "https://github.com/NaufalSyh/bot_sensama#readme",
   "dependencies": {
-    "discord.js": "^14.25.1",
-    "dotenv": "^17.2.2",
+    "discord-interactions": "^4.4.0",
+    "dotenv": "^17.4.2",
+    "sharp": "^0.35.4",
     "xlsx": "^0.18.5"
   }
 }
