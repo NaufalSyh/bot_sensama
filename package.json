@@ -5,6 +5,7 @@
   "main": "api/interactions.js",
   "type": "module",
   "scripts": {
+    "register-command": "node src/register-command.js",
     "start": "node api/interactions.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
