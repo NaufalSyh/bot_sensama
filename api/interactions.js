@@ -1,8 +1,8 @@
 import "dotenv/config";
 
 import {
-  InteractionResponseType,
   InteractionType,
+  InteractionResponseType,
   verifyKey
 } from "discord-interactions";
 
@@ -13,24 +13,14 @@ import {
   deleteSession
 } from "../src/session.js";
 
-import {
-  validateKTPData,
-  cleanKTPData
-} from "../src/validation.js";
 
-import {
-  saveKTPData
-} from "../src/excel.js";
-
-export const config = {
-  api: {
-    bodyParser: false
-  }
-};
-
-const PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
+// =====================================================
+// MAIN HANDLER
+// =====================================================
 
 export default async function handler(req, res) {
+
+  // Hanya menerima POST
   if (req.method !== "POST") {
     return res.status(405).json({
       success: false,
@@ -39,637 +29,1274 @@ export default async function handler(req, res) {
   }
 
   try {
-    const rawBody = await getRawBody(req);
 
-    const signature = req.headers["x-signature-ed25519"];
-    const timestamp = req.headers["x-signature-timestamp"];
+    // =================================================
+    // AMBIL HEADER VERIFIKASI DISCORD
+    // =================================================
+
+    const signature =
+      req.headers["x-signature-ed25519"];
+
+    const timestamp =
+      req.headers["x-signature-timestamp"];
 
     if (!signature || !timestamp) {
-      return res.status(401).json({
-        success: false,
-        message: "Signature Discord tidak ditemukan."
-      });
+      return res.status(401).send(
+        "Missing Discord signature"
+      );
     }
 
-    const isValid = await verifyKey(
+
+    // =================================================
+    // AMBIL RAW BODY
+    // =================================================
+
+    const rawBody = await getRawBody(req);
+
+
+    // =================================================
+    // VERIFIKASI REQUEST DISCORD
+    // =================================================
+
+    const isValidRequest = verifyKey(
       rawBody,
       signature,
       timestamp,
-      PUBLIC_KEY
+      process.env.DISCORD_PUBLIC_KEY
     );
 
-    if (!isValid) {
-      return res.status(401).json({
-        success: false,
-        message: "Signature tidak valid."
-      });
+    if (!isValidRequest) {
+      return res.status(401).send(
+        "Invalid request signature"
+      );
     }
 
-    const interaction = JSON.parse(rawBody.toString());
 
-    if (interaction.type === InteractionType.PING) {
+    // =================================================
+    // PARSE DATA
+    // =================================================
+
+    const interaction = JSON.parse(
+      rawBody.toString()
+    );
+
+
+    // =================================================
+    // DISCORD PING
+    // =================================================
+
+    if (
+      interaction.type ===
+      InteractionType.PING
+    ) {
       return res.status(200).json({
         type: InteractionResponseType.PONG
       });
     }
 
-    if (interaction.type === InteractionType.APPLICATION_COMMAND) {
-      return handleCommand(interaction, res);
+
+    // =================================================
+    // SLASH COMMAND
+    // =================================================
+
+    if (
+      interaction.type ===
+      InteractionType.APPLICATION_COMMAND
+    ) {
+      return await handleCommand(
+        interaction,
+        res
+      );
     }
 
-    if (interaction.type === InteractionType.MESSAGE_COMPONENT) {
-      return handleButton(interaction, res);
+
+    // =================================================
+    // BUTTON
+    // =================================================
+
+    if (
+      interaction.type ===
+      InteractionType.MESSAGE_COMPONENT
+    ) {
+      return await handleButton(
+        interaction,
+        res
+      );
     }
 
-    if (interaction.type === InteractionType.MODAL_SUBMIT) {
-      return handleModal(interaction, res);
+
+    // =================================================
+    // MODAL SUBMIT
+    // =================================================
+
+    if (
+      interaction.type ===
+      InteractionType.MODAL_SUBMIT
+    ) {
+      return await handleModal(
+        interaction,
+        res
+      );
     }
+
+
+    // =================================================
+    // UNKNOWN INTERACTION
+    // =================================================
 
     return res.status(200).json({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      type:
+        InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+
       data: {
-        content: "Interaksi tidak dikenali.",
-        flags: 64
+        content:
+          "❌ Jenis interaksi tidak dikenali."
       }
     });
+
   } catch (error) {
-    console.error(error);
+
+    console.error(
+      "ERROR INTERACTION:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Terjadi kesalahan pada server."
+      message: "Terjadi kesalahan pada bot."
     });
   }
 }
 
-async function handleCommand(interaction, res) {
-  const commandName = interaction.data?.name;
 
-  if (commandName !== "ktp") {
+// =====================================================
+// SLASH COMMAND HANDLER
+// =====================================================
+
+async function handleCommand(
+  interaction,
+  res
+) {
+
+  const commandName =
+    interaction.data?.name;
+
+
+  // =================================================
+  // COMMAND /KTP
+  // =================================================
+
+  if (commandName === "ktp") {
+
     return res.status(200).json({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+
+      type:
+        InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+
       data: {
-        content: "Command tidak dikenali.",
-        flags: 64
+
+        embeds: [
+          {
+
+            title: "🪪 KTP Virtual",
+
+            description:
+              "Selamat datang di **KTP Virtual**.\n\n" +
+
+              "Silakan tekan tombol **Isi Data KTP** " +
+              "untuk mulai membuat KTP Virtual kamu.\n\n" +
+
+              "⚠️ **Penting:** KTP Virtual ini hanya " +
+              "untuk keperluan komunitas/hiburan dan " +
+              "**tidak berlaku sebagai identitas resmi**.",
+
+            color: 3447003,
+
+            fields: [
+
+              {
+                name: "📋 Data",
+                value:
+                  "Isi data diri sesuai informasi yang ingin ditampilkan."
+              },
+
+              {
+                name: "📷 Foto",
+                value:
+                  "Kamu dapat menggunakan foto profil Discord " +
+                  "atau foto otomatis berdasarkan jenis kelamin."
+              },
+
+              {
+                name: "🆔 Virtual ID",
+                value:
+                  "Virtual ID akan dibuat otomatis oleh sistem."
+              }
+
+            ],
+
+            footer: {
+              text:
+                "KTP Virtual • Tidak berlaku sebagai identitas resmi"
+            }
+
+          }
+        ],
+
+        components: [
+
+          {
+
+            type: 1,
+
+            components: [
+
+              {
+
+                type: 2,
+
+                style: 1,
+
+                label: "Isi Data KTP",
+
+                emoji: {
+                  name: "📝"
+                },
+
+                custom_id:
+                  "ktp_start"
+
+              }
+
+            ]
+
+          }
+
+        ]
+
       }
+
     });
   }
 
+
+  // =================================================
+  // COMMAND TIDAK DITEMUKAN
+  // =================================================
+
   return res.status(200).json({
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+
+    type:
+      InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+
     data: {
-      flags: 64,
-      embeds: [
-        {
-          title: "🪪 KTP Virtual",
-          description:
-            "Buat KTP Virtual dengan mengisi data diri Anda.\n\nKlik tombol di bawah untuk memulai.",
-          color: 3447003,
-          footer: {
-            text: "Sensus Sama"
-          }
-        }
-      ],
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 2,
-              style: 1,
-              label: "Isi Data KTP",
-              custom_id: "ktp_start"
-            }
-          ]
-        }
-      ]
+      content:
+        "❌ Command tidak ditemukan."
     }
+
   });
 }
 
-async function handleButton(interaction, res) {
-  const customId = interaction.data?.custom_id;
-  const userId = interaction.member?.user?.id || interaction.user?.id;
+
+// =====================================================
+// BUTTON HANDLER
+// =====================================================
+
+async function handleButton(
+  interaction,
+  res
+) {
+
+  const customId =
+    interaction.data?.custom_id;
+
+
+  // =================================================
+  // USER ID DISCORD
+  // =================================================
+
+  const userId =
+    interaction.member?.user?.id ||
+    interaction.user?.id;
+
+
+  // =================================================
+  // TOMBOL MULAI FORM
+  // =================================================
 
   if (customId === "ktp_start") {
+
+    // Buat session baru
     createSession(userId);
 
+
     return res.status(200).json({
-      type: InteractionResponseType.MODAL,
+
+      type:
+        InteractionResponseType.MODAL,
+
       data: {
-        custom_id: "ktp_form_1",
-        title: "Data KTP - Bagian 1",
+
+        custom_id:
+          "ktp_form_1",
+
+        title:
+          "Data KTP Virtual (1/2)",
+
         components: [
+
           createInput(
             "nama_lengkap",
             "Nama Lengkap",
-            "Contoh: Budi Santoso",
-            true
+            "Masukkan nama lengkap",
+            true,
+            1,
+            100
           ),
+
           createInput(
             "tempat_lahir",
             "Tempat Lahir",
             "Contoh: Surabaya",
-            true
+            true,
+            1,
+            50
           ),
+
           createInput(
             "tanggal_lahir",
             "Tanggal Lahir",
-            "Contoh: 17-08-2000",
-            true
+            "Contoh: 13-09-2005",
+            true,
+            10,
+            10
           ),
+
           createInput(
             "jenis_kelamin",
             "Jenis Kelamin",
             "Laki-laki / Perempuan",
-            true
+            true,
+            1,
+            20
           ),
+
           createInput(
             "golongan_darah",
             "Golongan Darah",
-            "A / B / AB / O",
-            true
+            "Contoh: O",
+            true,
+            1,
+            3
           )
+
         ]
+
       }
+
     });
   }
 
-  if (customId === "ktp_continue_2") {
-    const session = getSession(userId);
+
+  // =================================================
+  // FOTO DISCORD
+  // =================================================
+
+  if (customId === "foto_discord") {
+
+    return handlePhotoSelection(
+      interaction,
+      res,
+      "discord"
+    );
+  }
+
+
+  // =================================================
+  // FOTO OTOMATIS
+  // =================================================
+
+  if (customId === "foto_otomatis") {
+
+    return handlePhotoSelection(
+      interaction,
+      res,
+      "otomatis"
+    );
+  }
+
+
+  // =================================================
+  // KONFIRMASI
+  // =================================================
+
+  if (customId === "ktp_confirm") {
+
+    const session =
+      getSession(userId);
 
     if (!session) {
-      return ephemeral(res, "❌ Sesi KTP sudah berakhir. Silakan gunakan /ktp lagi.");
+
+      return sendEphemeral(
+        res,
+        "❌ Sesi formulir sudah tidak tersedia. Silakan gunakan `/ktp` untuk memulai kembali."
+      );
+
     }
 
+
+    console.log(
+      "================================"
+    );
+
+    console.log(
+      "DATA KTP USER:"
+    );
+
+    console.log({
+      discord_id: userId,
+      ...session.data
+    });
+
+    console.log(
+      "================================"
+    );
+
+
     return res.status(200).json({
-      type: InteractionResponseType.MODAL,
+
+      type:
+        InteractionResponseType.UPDATE_MESSAGE,
+
       data: {
-        custom_id: "ktp_form_2",
-        title: "Data KTP - Bagian 2",
+
+        content:
+          "✅ **Data berhasil dikonfirmasi!**\n\n" +
+
+          "Data kamu sudah diterima oleh bot.\n\n" +
+
+          "⏳ Tahap berikutnya akan kita tambahkan:\n" +
+
+          "• 🆔 Membuat Virtual ID\n" +
+          "• 📊 Menyimpan data ke Excel\n" +
+          "• 📷 Mengambil foto Discord / foto otomatis\n" +
+          "• 🪪 Membuat gambar KTP Virtual\n" +
+          "• 🛡️ Memberikan role KTP Verified",
+
+        components: []
+
+      }
+
+    });
+  }
+
+
+  // =================================================
+  // BATAL
+  // =================================================
+
+  if (customId === "ktp_cancel") {
+
+    deleteSession(userId);
+
+
+    return res.status(200).json({
+
+      type:
+        InteractionResponseType.UPDATE_MESSAGE,
+
+      data: {
+
+        content:
+          "❌ **Pembuatan KTP Virtual dibatalkan.**\n\n" +
+          "Kamu dapat menggunakan `/ktp` kembali jika ingin membuat KTP Virtual.",
+
+        components: []
+
+      }
+
+    });
+  }
+
+
+  // =================================================
+  // BUTTON TIDAK DIKENAL
+  // =================================================
+
+  return sendEphemeral(
+    res,
+    "❌ Tombol tidak dikenali."
+  );
+}
+
+
+// =====================================================
+// MODAL HANDLER
+// =====================================================
+
+async function handleModal(
+  interaction,
+  res
+) {
+
+  const customId =
+    interaction.data?.custom_id;
+
+
+  const userId =
+    interaction.member?.user?.id ||
+    interaction.user?.id;
+
+
+  // =================================================
+  // FORM 1
+  // =================================================
+
+  if (customId === "ktp_form_1") {
+
+    const session =
+      getSession(userId);
+
+
+    if (!session) {
+
+      return sendEphemeral(
+        res,
+        "❌ Sesi formulir tidak ditemukan. Silakan gunakan `/ktp` untuk memulai kembali."
+      );
+
+    }
+
+
+    const fields =
+      getModalFields(interaction);
+
+
+    // Simpan Form 1
+    updateSession(
+      userId,
+      {
+
+        nama_lengkap:
+          fields.nama_lengkap,
+
+        tempat_lahir:
+          fields.tempat_lahir,
+
+        tanggal_lahir:
+          fields.tanggal_lahir,
+
+        jenis_kelamin:
+          fields.jenis_kelamin,
+
+        golongan_darah:
+          fields.golongan_darah
+
+      }
+    );
+
+
+    // =================================================
+    // TAMPILKAN FORM 2
+    // =================================================
+
+    return res.status(200).json({
+
+      type:
+        InteractionResponseType.MODAL,
+
+      data: {
+
+        custom_id:
+          "ktp_form_2",
+
+        title:
+          "Data KTP Virtual (2/2)",
+
         components: [
+
           createInput(
             "alamat",
             "Alamat",
-            "Masukkan alamat lengkap",
+            "Masukkan alamat",
             true,
+            1,
+            200,
             2
           ),
+
           createInput(
             "rt_rw",
             "RT/RW",
             "Contoh: 001/002",
-            true
+            true,
+            1,
+            10
           ),
+
           createInput(
             "kelurahan",
             "Kelurahan / Desa",
-            "Contoh: Ketintang",
-            true
+            "Contoh: Wonokromo",
+            true,
+            1,
+            100
           ),
+
           createInput(
             "kecamatan",
             "Kecamatan",
-            "Contoh: Gayungan",
-            true
+            "Contoh: Wonokromo",
+            true,
+            1,
+            100
           ),
+
           createInput(
             "pekerjaan",
             "Pekerjaan",
             "Contoh: Mahasiswa",
-            true
+            true,
+            1,
+            100
           )
+
         ]
+
       }
+
     });
   }
 
-  if (customId === "foto_discord") {
-    return handlePhotoSelection(
-      userId,
-      "Foto Discord",
-      res
-    );
-  }
 
-  if (customId === "foto_otomatis") {
-    return handlePhotoSelection(
-      userId,
-      "Foto Otomatis",
-      res
-    );
-  }
+  // =================================================
+  // FORM 2
+  // =================================================
 
-  if (customId === "ktp_confirm") {
-    return handleConfirmation(
+  if (customId === "ktp_form_2") {
+
+    const session =
+      getSession(userId);
+
+
+    if (!session) {
+
+      return sendEphemeral(
+        res,
+        "❌ Sesi formulir tidak ditemukan. Silakan gunakan `/ktp` untuk memulai kembali."
+      );
+
+    }
+
+
+    const fields =
+      getModalFields(interaction);
+
+
+    // Simpan Form 2
+    updateSession(
       userId,
+      {
+
+        alamat:
+          fields.alamat,
+
+        rt_rw:
+          fields.rt_rw,
+
+        kelurahan:
+          fields.kelurahan,
+
+        kecamatan:
+          fields.kecamatan,
+
+        pekerjaan:
+          fields.pekerjaan
+
+      }
+    );
+
+
+    // Tampilkan pilihan foto
+    return showPhotoSelection(
       interaction,
       res
     );
   }
 
-  if (customId === "ktp_cancel") {
-    deleteSession(userId);
 
-    return res.status(200).json({
-      type: InteractionResponseType.UPDATE_MESSAGE,
-      data: {
-        content: "❌ Pembuatan KTP dibatalkan.",
-        embeds: [],
-        components: []
-      }
-    });
-  }
+  // =================================================
+  // MODAL TIDAK DIKENAL
+  // =================================================
 
-  return ephemeral(res, "❌ Tombol tidak dikenali.");
-}
-
-async function handleModal(interaction, res) {
-  const customId = interaction.data?.custom_id;
-  const userId = interaction.member?.user?.id || interaction.user?.id;
-
-  const session = getSession(userId);
-
-  if (!session) {
-    return ephemeral(
-      res,
-      "❌ Sesi KTP sudah berakhir. Silakan gunakan /ktp lagi."
-    );
-  }
-
-  const fields = parseModalFields(
-    interaction.data?.components || []
+  return sendEphemeral(
+    res,
+    "❌ Form tidak dikenali."
   );
-
-  if (customId === "ktp_form_1") {
-    const data = {
-      ...session.data,
-      ...fields
-    };
-
-    const validation = validateKTPData({
-      ...data,
-      alamat: "sementara",
-      rt_rw: "sementara",
-      kelurahan: "sementara",
-      kecamatan: "sementara",
-      pekerjaan: "sementara"
-    });
-
-    if (!validation.valid) {
-      return ephemeral(
-        res,
-        `❌ ${validation.errors.join("\n")}`
-      );
-    }
-
-    updateSession(userId, data);
-
-    return res.status(200).json({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        content:
-          "✅ Data bagian pertama berhasil disimpan.\n\nKlik **Lanjutkan** untuk mengisi data berikutnya.",
-        flags: 64,
-        components: [
-          {
-            type: 1,
-            components: [
-              {
-                type: 2,
-                style: 1,
-                label: "Lanjutkan",
-                custom_id: "ktp_continue_2"
-              },
-              {
-                type: 2,
-                style: 4,
-                label: "Batalkan",
-                custom_id: "ktp_cancel"
-              }
-            ]
-          }
-        ]
-      }
-    });
-  }
-
-  if (customId === "ktp_form_2") {
-    const data = {
-      ...session.data,
-      ...fields
-    };
-
-    const cleaned = cleanKTPData(data);
-    const validation = validateKTPData({
-      ...cleaned,
-      alamat: cleaned.alamat,
-      rt_rw: cleaned.rt_rw,
-      kelurahan: cleaned.kelurahan,
-      kecamatan: cleaned.kecamatan,
-      pekerjaan: cleaned.pekerjaan
-    });
-
-    if (!validation.valid) {
-      return ephemeral(
-        res,
-        `❌ ${validation.errors.join("\n")}`
-      );
-    }
-
-    updateSession(userId, cleaned);
-
-    return res.status(200).json({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        content: "📸 Pilih foto yang ingin digunakan untuk KTP:",
-        flags: 64,
-        components: [
-          {
-            type: 1,
-            components: [
-              {
-                type: 2,
-                style: 1,
-                label: "Foto Discord",
-                custom_id: "foto_discord"
-              },
-              {
-                type: 2,
-                style: 2,
-                label: "Foto Otomatis",
-                custom_id: "foto_otomatis"
-              }
-            ]
-          }
-        ]
-      }
-    });
-  }
-
-  return ephemeral(res, "❌ Form tidak dikenali.");
 }
 
-async function handlePhotoSelection(
-  userId,
-  photoType,
-  res
-) {
-  const session = getSession(userId);
 
-  if (!session) {
-    return ephemeral(
-      res,
-      "❌ Sesi KTP sudah berakhir. Silakan gunakan /ktp lagi."
-    );
-  }
+// =====================================================
+// PILIH FOTO
+// =====================================================
 
-  updateSession(userId, {
-    photo_type: photoType
-  });
-
-  const updatedSession = getSession(userId);
-
-  const data = updatedSession.data;
-
-  return res.status(200).json({
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: {
-      flags: 64,
-      embeds: [
-        {
-          title: "📋 Konfirmasi Data KTP",
-          color: 3447003,
-          fields: [
-            {
-              name: "Nama Lengkap",
-              value: data.nama_lengkap || "-",
-              inline: true
-            },
-            {
-              name: "Tempat Lahir",
-              value: data.tempat_lahir || "-",
-              inline: true
-            },
-            {
-              name: "Tanggal Lahir",
-              value: data.tanggal_lahir || "-",
-              inline: true
-            },
-            {
-              name: "Jenis Kelamin",
-              value: data.jenis_kelamin || "-",
-              inline: true
-            },
-            {
-              name: "Golongan Darah",
-              value: data.golongan_darah || "-",
-              inline: true
-            },
-            {
-              name: "Alamat",
-              value: data.alamat || "-",
-              inline: false
-            },
-            {
-              name: "RT/RW",
-              value: data.rt_rw || "-",
-              inline: true
-            },
-            {
-              name: "Kelurahan / Desa",
-              value: data.kelurahan || "-",
-              inline: true
-            },
-            {
-              name: "Kecamatan",
-              value: data.kecamatan || "-",
-              inline: true
-            },
-            {
-              name: "Pekerjaan",
-              value: data.pekerjaan || "-",
-              inline: true
-            },
-            {
-              name: "Foto",
-              value: data.photo_type || "-",
-              inline: true
-            }
-          ]
-        }
-      ],
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 2,
-              style: 3,
-              label: "Konfirmasi",
-              custom_id: "ktp_confirm"
-            },
-            {
-              type: 2,
-              style: 4,
-              label: "Batalkan",
-              custom_id: "ktp_cancel"
-            }
-          ]
-        }
-      ]
-    }
-  });
-}
-
-async function handleConfirmation(
-  userId,
+function showPhotoSelection(
   interaction,
   res
 ) {
-  const session = getSession(userId);
+
+  return res.status(200).json({
+
+    type:
+      InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+
+    data: {
+
+      embeds: [
+
+        {
+
+          title:
+            "📷 Pilih Foto",
+
+          description:
+            "Pilih foto yang ingin digunakan pada KTP Virtual kamu.",
+
+          color:
+            3447003,
+
+          fields: [
+
+            {
+
+              name:
+                "👤 Foto Discord",
+
+              value:
+                "Menggunakan foto profil/avatar Discord kamu."
+
+            },
+
+            {
+
+              name:
+                "📸 Foto Otomatis",
+
+              value:
+                "Sistem memilih foto berdasarkan jenis kelamin."
+
+            }
+
+          ],
+
+          footer: {
+
+            text:
+              "KTP Virtual • Tidak berlaku sebagai identitas resmi"
+
+          }
+
+        }
+
+      ],
+
+      components: [
+
+        {
+
+          type: 1,
+
+          components: [
+
+            {
+
+              type: 2,
+
+              style: 1,
+
+              label:
+                "Foto Discord",
+
+              emoji: {
+                name: "👤"
+              },
+
+              custom_id:
+                "foto_discord"
+
+            },
+
+            {
+
+              type: 2,
+
+              style: 2,
+
+              label:
+                "Foto Otomatis",
+
+              emoji: {
+                name: "📸"
+              },
+
+              custom_id:
+                "foto_otomatis"
+
+            }
+
+          ]
+
+        }
+
+      ]
+
+    }
+
+  });
+}
+
+
+// =====================================================
+// PROSES PILIHAN FOTO
+// =====================================================
+
+function handlePhotoSelection(
+  interaction,
+  res,
+  photoType
+) {
+
+  const userId =
+    interaction.member?.user?.id ||
+    interaction.user?.id;
+
+
+  const session =
+    getSession(userId);
+
 
   if (!session) {
-    return res.status(200).json({
-      type: InteractionResponseType.UPDATE_MESSAGE,
-      data: {
-        content:
-          "❌ Sesi KTP sudah berakhir. Silakan gunakan /ktp lagi.",
-        embeds: [],
-        components: []
-      }
-    });
+
+    return sendEphemeral(
+      res,
+      "❌ Sesi formulir sudah tidak tersedia. Silakan gunakan `/ktp` untuk memulai kembali."
+    );
+
   }
 
-  const user =
-    interaction.member?.user ||
-    interaction.user;
 
-  const cleaned = cleanKTPData(session.data);
+  // Simpan pilihan foto
+  updateSession(
+    userId,
+    {
+      photo_type: photoType
+    }
+  );
 
-  const validation = validateKTPData(cleaned);
 
-  if (!validation.valid) {
-    return res.status(200).json({
-      type: InteractionResponseType.UPDATE_MESSAGE,
-      data: {
-        content: `❌ Data tidak valid.\n\n${validation.errors.join("\n")}`,
-        embeds: [],
-        components: []
-      }
-    });
-  }
+  // Ambil data terbaru
+  const updatedSession =
+    getSession(userId);
 
-  try {
-    const savedData = saveKTPData({
-      ...cleaned,
-      discord_id: userId,
-      discord_username:
-        user?.username || "",
-      photo_type:
-        session.data.photo_type || "Belum dipilih",
-      created_at:
-        new Date().toLocaleString("id-ID")
-    });
 
-    deleteSession(userId);
-
-    return res.status(200).json({
-      type: InteractionResponseType.UPDATE_MESSAGE,
-      data: {
-        content:
-          `🎉 **KTP Virtual berhasil dibuat!**\n\n` +
-          `🪪 **Virtual ID:** ${savedData["Virtual ID"]}\n` +
-          `👤 **Nama:** ${savedData["Nama Lengkap"]}\n` +
-          `📸 **Foto:** ${savedData["Jenis Foto"]}`,
-        embeds: [],
-        components: []
-      }
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(200).json({
-      type: InteractionResponseType.UPDATE_MESSAGE,
-      data: {
-        content:
-          "❌ Gagal menyimpan data KTP. Silakan coba lagi.",
-        embeds: [],
-        components: []
-      }
-    });
-  }
+  return showConfirmation(
+    interaction,
+    res,
+    updatedSession.data
+  );
 }
+
+
+// =====================================================
+// KONFIRMASI DATA
+// =====================================================
+
+function showConfirmation(
+  interaction,
+  res,
+  data
+) {
+
+  let photoText =
+    "❌ Tidak dipilih";
+
+
+  if (data.photo_type === "discord") {
+
+    photoText =
+      "👤 Foto profil Discord";
+
+  } else if (
+    data.photo_type === "otomatis"
+  ) {
+
+    const gender =
+      (data.jenis_kelamin || "")
+        .toLowerCase()
+        .trim();
+
+
+    if (
+      gender.includes("perempuan") ||
+      gender.includes("wanita")
+    ) {
+
+      photoText =
+        "📸 Foto otomatis perempuan";
+
+    } else {
+
+      photoText =
+        "📸 Foto otomatis laki-laki";
+
+    }
+  }
+
+
+  return res.status(200).json({
+
+    type:
+      InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+
+    data: {
+
+      embeds: [
+
+        {
+
+          title:
+            "✅ Konfirmasi Data",
+
+          description:
+            "Periksa kembali data berikut sebelum membuat KTP Virtual.",
+
+          color:
+            3066993,
+
+          fields: [
+
+            {
+
+              name:
+                "Nama Lengkap",
+
+              value:
+                data.nama_lengkap || "-",
+
+              inline: false
+
+            },
+
+            {
+
+              name:
+                "Tempat / Tanggal Lahir",
+
+              value:
+                `${data.tempat_lahir || "-"}, ${data.tanggal_lahir || "-"}`,
+
+              inline: false
+
+            },
+
+            {
+
+              name:
+                "Jenis Kelamin",
+
+              value:
+                data.jenis_kelamin || "-",
+
+              inline: true
+
+            },
+
+            {
+
+              name:
+                "Golongan Darah",
+
+              value:
+                data.golongan_darah || "-",
+
+              inline: true
+
+            },
+
+            {
+
+              name:
+                "Alamat",
+
+              value:
+                data.alamat || "-",
+
+              inline: false
+
+            },
+
+            {
+
+              name:
+                "RT/RW",
+
+              value:
+                data.rt_rw || "-",
+
+              inline: true
+
+            },
+
+            {
+
+              name:
+                "Kelurahan / Desa",
+
+              value:
+                data.kelurahan || "-",
+
+              inline: true
+
+            },
+
+            {
+
+              name:
+                "Kecamatan",
+
+              value:
+                data.kecamatan || "-",
+
+              inline: true
+
+            },
+
+            {
+
+              name:
+                "Pekerjaan",
+
+              value:
+                data.pekerjaan || "-",
+
+              inline: true
+
+            },
+
+            {
+
+              name:
+                "Foto",
+
+              value:
+                photoText,
+
+              inline: false
+
+            }
+
+          ],
+
+          footer: {
+
+            text:
+              "Pastikan semua data sudah benar."
+
+          }
+
+        }
+
+      ],
+
+      components: [
+
+        {
+
+          type: 1,
+
+          components: [
+
+            {
+
+              type: 2,
+
+              style: 3,
+
+              label:
+                "Konfirmasi",
+
+              emoji: {
+                name: "✅"
+              },
+
+              custom_id:
+                "ktp_confirm"
+
+            },
+
+            {
+
+              type: 2,
+
+              style: 4,
+
+              label:
+                "Batal",
+
+              emoji: {
+                name: "❌"
+              },
+
+              custom_id:
+                "ktp_cancel"
+
+            }
+
+          ]
+
+        }
+
+      ]
+
+    }
+
+  });
+}
+
+
+// =====================================================
+// MEMBUAT INPUT MODAL
+// =====================================================
 
 function createInput(
   customId,
   label,
   placeholder,
   required = true,
+  minLength = 1,
+  maxLength = 100,
   style = 1
 ) {
-  const input = {
-    type: 4,
-    custom_id: customId,
-    label,
-    style,
-    placeholder,
-    required
-  };
 
   return {
+
     type: 1,
-    components: [input]
+
+    components: [
+
+      {
+
+        type: 4,
+
+        custom_id:
+          customId,
+
+        label:
+          label,
+
+        style:
+          style,
+
+        placeholder:
+          placeholder,
+
+        required:
+          required,
+
+        min_length:
+          minLength,
+
+        max_length:
+          maxLength
+
+      }
+
+    ]
+
   };
 }
 
-function parseModalFields(components) {
-  const data = {};
 
-  for (const row of components) {
-    const component = row.components?.[0];
+// =====================================================
+// MENGAMBIL DATA MODAL
+// =====================================================
 
-    if (!component) continue;
+function getModalFields(
+  interaction
+) {
 
-    if (component.custom_id) {
-      data[component.custom_id] =
-        component.value || "";
+  const result = {};
+
+
+  for (
+    const row
+    of interaction.data.components || []
+  ) {
+
+    const component =
+      row.components?.[0];
+
+
+    if (component) {
+
+      result[
+        component.custom_id
+      ] = component.value;
+
     }
+
   }
 
-  return data;
+
+  return result;
 }
 
-function ephemeral(res, content) {
+
+// =====================================================
+// EPHEMERAL RESPONSE
+// =====================================================
+
+function sendEphemeral(
+  res,
+  message
+) {
+
   return res.status(200).json({
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+
+    type:
+      InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+
     data: {
-      content,
-      flags: 64
+
+      content:
+        message,
+
+      flags:
+        64
+
     }
+
   });
 }
 
-function getRawBody(req) {
-  return new Promise((resolve, reject) => {
-    if (Buffer.isBuffer(req.body)) {
-      return resolve(req.body);
-    }
 
-    if (typeof req.body === "string") {
-      return resolve(Buffer.from(req.body));
-    }
+// =====================================================
+// RAW BODY
+// =====================================================
 
-    const chunks = [];
+async function getRawBody(req) {
 
-    req.on("data", (chunk) => {
-      chunks.push(chunk);
-    });
+  const chunks = [];
 
-    req.on("end", () => {
-      resolve(Buffer.concat(chunks));
-    });
 
-    req.on("error", reject);
-  });
+  for await (
+    const chunk of req
+  ) {
+
+    chunks.push(chunk);
+
+  }
+
+
+  return Buffer.concat(chunks);
 }
