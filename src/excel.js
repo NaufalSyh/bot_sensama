@@ -3,11 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-
-// =====================================================
 // PATH
-// =====================================================
-
 const __filename =
   fileURLToPath(import.meta.url);
 
@@ -26,18 +22,10 @@ const EXCEL_PATH =
     "data.xlsx"
   );
 
-
-// =====================================================
 // NAMA SHEET
-// =====================================================
-
 const SHEET_NAME = "KTP";
 
-
-// =====================================================
 // HEADER EXCEL
-// =====================================================
-
 const HEADERS = [
   "No",
   "Virtual ID",
@@ -57,11 +45,7 @@ const HEADERS = [
   "Tanggal Dibuat"
 ];
 
-
-// =====================================================
 // MEMASTIKAN FOLDER DATA ADA
-// =====================================================
-
 function ensureDataDirectory() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(
@@ -73,11 +57,7 @@ function ensureDataDirectory() {
   }
 }
 
-
-// =====================================================
 // MEMBUAT FILE EXCEL BARU
-// =====================================================
-
 function createNewWorkbook() {
   const workbook =
     XLSX.utils.book_new();
@@ -96,11 +76,7 @@ function createNewWorkbook() {
   return workbook;
 }
 
-
-// =====================================================
 // MEMBUKA EXCEL
-// =====================================================
-
 function loadWorkbook() {
   ensureDataDirectory();
 
@@ -123,11 +99,7 @@ function loadWorkbook() {
   );
 }
 
-
-// =====================================================
 // MEMASTIKAN SHEET KTP ADA
-// =====================================================
-
 function getWorksheet(workbook) {
   let worksheet =
     workbook.Sheets[SHEET_NAME];
@@ -149,11 +121,7 @@ function getWorksheet(workbook) {
   return worksheet;
 }
 
-
-// =====================================================
 // MENGAMBIL SEMUA DATA
-// =====================================================
-
 export function getAllKTPData() {
   const workbook =
     loadWorkbook();
@@ -169,11 +137,7 @@ export function getAllKTPData() {
   );
 }
 
-
-// =====================================================
 // MENYIMPAN DATA KTP
-// =====================================================
-
 export function saveKTPData(data) {
 
   const workbook =
@@ -182,11 +146,7 @@ export function saveKTPData(data) {
   let worksheet =
     getWorksheet(workbook);
 
-
-  // -----------------------------------------------
   // Ambil data yang sudah ada
-  // -----------------------------------------------
-
   const existingData =
     XLSX.utils.sheet_to_json(
       worksheet,
@@ -195,19 +155,11 @@ export function saveKTPData(data) {
       }
     );
 
-
-  // -----------------------------------------------
   // Nomor urut
-  // -----------------------------------------------
-
   const nextNumber =
     existingData.length + 1;
 
-
-  // -----------------------------------------------
   // Data baru
-  // -----------------------------------------------
-
   const newRow = {
 
     "No":
@@ -263,20 +215,12 @@ export function saveKTPData(data) {
 
   };
 
-
-  // -----------------------------------------------
   // Tambahkan row
-  // -----------------------------------------------
-
   existingData.push(
     newRow
   );
 
-
-  // -----------------------------------------------
   // Buat worksheet baru
-  // -----------------------------------------------
-
   worksheet =
     XLSX.utils.json_to_sheet(
       existingData,
@@ -285,19 +229,11 @@ export function saveKTPData(data) {
       }
     );
 
-
-  // -----------------------------------------------
   // Ganti worksheet
-  // -----------------------------------------------
-
   workbook.Sheets[SHEET_NAME] =
     worksheet;
 
-
-  // -----------------------------------------------
   // Tulis ke file
-  // -----------------------------------------------
-
   XLSX.writeFile(
     workbook,
     EXCEL_PATH
@@ -307,11 +243,7 @@ export function saveKTPData(data) {
   return newRow;
 }
 
-
-// =====================================================
 // MENCARI BERDASARKAN DISCORD ID
-// =====================================================
-
 export function findByDiscordId(
   discordId
 ) {
@@ -326,11 +258,7 @@ export function findByDiscordId(
   ) || null;
 }
 
-
-// =====================================================
 // MENCARI BERDASARKAN VIRTUAL ID
-// =====================================================
-
 export function findByVirtualId(
   virtualId
 ) {
@@ -345,11 +273,7 @@ export function findByVirtualId(
   ) || null;
 }
 
-
-// =====================================================
 // MENGECEK APAKAH USER SUDAH TERDAFTAR
-// =====================================================
-
 export function isUserRegistered(
   discordId
 ) {
@@ -360,11 +284,7 @@ export function isUserRegistered(
   );
 }
 
-
-// =====================================================
 // MENDAPATKAN LOKASI FILE EXCEL
-// =====================================================
-
 export function getExcelPath() {
   ensureDataDirectory();
 
