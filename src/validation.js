@@ -348,11 +348,7 @@ export function normalizeRTRW(
   );
 }
 
-
-// =====================================================
 // MEMBERSIHKAN DATA
-// =====================================================
-
 export function cleanKTPData(data) {
   return {
     nama_lengkap:
